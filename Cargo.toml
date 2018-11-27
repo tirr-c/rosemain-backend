@@ -1,0 +1,11 @@
+[package]
+name = "rosemain"
+version = "0.1.0"
+authors = ["Wonwoo Choi <chwo9843@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+juniper = "0.10.0"
+
+[dependencies.tide]
+git = "https://github.com/rust-net-web/tide.git"
