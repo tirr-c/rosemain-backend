@@ -54,7 +54,7 @@ table! {
         id -> Uuid,
         parent_series_id -> Nullable<Uuid>,
         code -> Varchar,
-        order_in_series -> Int4,
+        order_in_series -> Nullable<Int4>,
     }
 }
 
