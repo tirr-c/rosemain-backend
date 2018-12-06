@@ -1,6 +1,9 @@
 use chrono::NaiveDate;
+use diesel::prelude::*;
+use juniper::FieldResult;
 use uuid::prelude::*;
 
+use crate::graphql::Context;
 use crate::schema::*;
 
 #[derive(Identifiable, Queryable, Associations, Insertable, AsChangeset, Debug)]
@@ -41,6 +44,70 @@ impl Series {
     }
 }
 
+graphql_object!(Series: Context |&self| {
+    field id() -> Uuid {
+        self.id
+    }
+
+    field code() -> &str {
+        &self.code
+    }
+
+    field order_in_series() -> Option<i32> {
+        self.order_in_series
+    }
+
+    field children_series(&executor) -> FieldResult<Vec<Series>> {
+        let conn = executor.context().pool.get()?;
+        let series = Series::belonging_to(self)
+            .select(series::all_columns)
+            .load(&conn)?;
+        Ok(series)
+    }
+
+    field series(&executor, order_in_series: i32) -> FieldResult<Series> {
+        let conn = executor.context().pool.get()?;
+        let result = series::table
+            .filter(series::columns::parent_series_id.eq(Some(self.id)))
+            .filter(series::columns::order_in_series.eq(Some(order_in_series)))
+            .select(series::all_columns)
+            .first(&conn)?;
+        Ok(result)
+    }
+
+    field children_books(&executor) -> FieldResult<Vec<Book>> {
+        let conn = executor.context().pool.get()?;
+        let books = Book::belonging_to(self)
+            .select(book::all_columns)
+            .load(&conn)?;
+        Ok(books)
+    }
+
+    field book(&executor, order_in_series: i32) -> FieldResult<Book> {
+        let conn = executor.context().pool.get()?;
+        let result = book::table
+            .filter(book::columns::series_id.eq(self.id))
+            .filter(book::columns::order_in_series.eq(order_in_series))
+            .select(book::all_columns)
+            .first(&conn)?;
+        Ok(result)
+    }
+
+    field parent_series(&executor) -> FieldResult<Option<Series>> {
+        let conn = executor.context().pool.get()?;
+        let result = if let Some(id) = self.parent_series_id {
+            Some(
+                series::table
+                    .find(id)
+                    .first(&conn)?
+            )
+        } else {
+            None
+        };
+        Ok(result)
+    }
+});
+
 #[derive(Identifiable, Queryable, Associations, Insertable, AsChangeset, Debug)]
 #[belongs_to(Series)]
 #[table_name = "book"]
@@ -49,6 +116,24 @@ pub struct Book {
     pub series_id: Uuid,
     pub order_in_series: i32,
 }
+
+graphql_object!(Book: Context |&self| {
+    field id() -> Uuid {
+        self.id
+    }
+
+    field order_in_series() -> i32 {
+        self.order_in_series
+    }
+
+    field parent_series(&executor) -> FieldResult<Series> {
+        let conn = executor.context().pool.get()?;
+        let result = series::table
+            .find(self.series_id)
+            .first(&conn)?;
+        Ok(result)
+    }
+});
 
 #[derive(Identifiable, Queryable, Associations, Insertable, AsChangeset, Debug)]
 #[belongs_to(Series)]
