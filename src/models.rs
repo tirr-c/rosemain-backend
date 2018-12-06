@@ -16,6 +16,12 @@ pub struct Series {
     pub order_in_series: Option<i32>,
 }
 
+impl Default for Series {
+    fn default() -> Self {
+        Series::new()
+    }
+}
+
 impl Series {
     pub fn new() -> Self {
         Series {
@@ -23,23 +29,6 @@ impl Series {
             parent_series_id: None,
             code: String::new(),
             order_in_series: None,
-        }
-    }
-
-    pub fn build_child_series(&self) -> Self {
-        Series {
-            id: Uuid::new_v4(),
-            parent_series_id: Some(self.id),
-            code: String::new(),
-            order_in_series: None,
-        }
-    }
-
-    pub fn build_child_book(&self) -> Book {
-        Book {
-            id: Uuid::new_v4(),
-            series_id: self.id,
-            order_in_series: 0,
         }
     }
 }
@@ -115,6 +104,16 @@ pub struct Book {
     pub id: Uuid,
     pub series_id: Uuid,
     pub order_in_series: i32,
+}
+
+impl Book {
+    pub fn new(series_id: Uuid, order_in_series: i32) -> Self {
+        Book {
+            id: Uuid::new_v4(),
+            series_id,
+            order_in_series,
+        }
+    }
 }
 
 graphql_object!(Book: Context |&self| {
