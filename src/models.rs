@@ -46,6 +46,25 @@ graphql_object!(Series: Context |&self| {
         self.order_in_series
     }
 
+    field available_languages(&executor) -> FieldResult<Vec<String>> {
+        let conn = executor.context().pool.get()?;
+        let result = series_info::table
+            .filter(series_info::columns::series_id.eq(self.id))
+            .select(series_info::columns::lang)
+            .load(&conn)?;
+        Ok(result)
+    }
+
+    field info(&executor, lang: String) -> FieldResult<SeriesInfo> {
+        let conn = executor.context().pool.get()?;
+        let result = series_info::table
+            .filter(series_info::columns::series_id.eq(self.id))
+            .filter(series_info::columns::lang.eq(lang))
+            .select(series_info::all_columns)
+            .first(&conn)?;
+        Ok(result)
+    }
+
     field children_series(&executor) -> FieldResult<Vec<Series>> {
         let conn = executor.context().pool.get()?;
         let series = Series::belonging_to(self)
@@ -143,6 +162,39 @@ pub struct SeriesInfo {
     pub lang: String,
     pub name: String,
 }
+
+impl SeriesInfo {
+    pub fn new(series_id: Uuid, lang: String, name: String) -> Self {
+        SeriesInfo {
+            id: Uuid::new_v4(),
+            series_id,
+            lang,
+            name,
+        }
+    }
+}
+
+graphql_object!(SeriesInfo: Context |&self| {
+    field id() -> Uuid {
+        self.id
+    }
+
+    field lang() -> &str {
+        &self.lang
+    }
+
+    field name() -> &str {
+        &self.name
+    }
+
+    field parent_series(&executor) -> FieldResult<Series> {
+        let conn = executor.context().pool.get()?;
+        let result = series::table
+            .find(self.series_id)
+            .first(&conn)?;
+        Ok(result)
+    }
+});
 
 #[derive(Identifiable, Queryable, Associations, Insertable, AsChangeset, Debug)]
 #[belongs_to(Book)]

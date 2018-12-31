@@ -40,6 +40,20 @@ graphql_object!(Mutation: Context |&self| {
         Ok(series)
     }
 
+    field new_series_info(
+        &executor,
+        series_id: Uuid,
+        lang: String,
+        name: String,
+    ) -> FieldResult<SeriesInfo> {
+        let conn = executor.context().pool.get()?;
+        let series_info = SeriesInfo::new(series_id, lang, name);
+        diesel::insert_into(series_info::table)
+            .values(&series_info)
+            .execute(&conn)?;
+        Ok(series_info)
+    }
+
     field new_book(
         &executor,
         series_id: Uuid,
